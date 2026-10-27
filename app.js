@@ -184,7 +184,7 @@ async function handleChat(msg){
   state.chat.push({role:'me',text:message});render();
   // Uma confirmação vale somente para a ação exibida, nunca para outra solicitação.
   if(state.pending){
-    if(/^(?:sim|pode|pode (?:salvar|anotar|fazer|confirmar)(?: isso)?|confirmo|confirma|confirmar|claro|ok|isso(?: mesmo)?|salva|salvar|pode ser)[.!?\s]*$/i.test(message)){await confirmPendingAction();return}
+    if(/^(?:sim(?:,?\s+pode(?: salvar)?)?|pode|pode (?:salvar|anotar|fazer|confirmar)(?: isso)?|confirmo|confirma|confirmar|claro|ok|isso(?: mesmo)?|salva|salvar|pode ser)[.!?\s]*$/i.test(message)){await confirmPendingAction();return}
     if(/^(?:n[aã]o|não quero|não salve|não salva|cancelar?|deixa|agora não)[.!?\s]*$/i.test(message)){state.pending=null;aiReply('Certo, não salvei a tarefa.');return}
     aiReply('Existe uma tarefa aguardando sua confirmação. Diga “sim” para salvar ou “não” para cancelar.');return;
   }
