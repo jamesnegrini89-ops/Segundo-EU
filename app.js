@@ -24,10 +24,11 @@ const FIREBASE_WEB_CONFIG = Object.freeze({
   appId: '1:837190433007:web:cc0f86c22c954b7381431a',
   messagingSenderId: '837190433007'
 });
-// A chave publica do reCAPTCHA Enterprise deve ser adicionada depois de validada.
-// Ate la, ela continua sendo lida no navegador configurado anteriormente.
+// Chave publica de site do reCAPTCHA Enterprise (nao e chave secreta).
+// A protecao efetiva depende da configuracao do Firebase App Check e dos dominios autorizados.
+const DEFAULT_APP_CHECK_SITE_KEY = '6LdzSQMuAAAAAPU0s5MwLmhTHKzJFwgEjFFo42ne';
 let backend=null, unsubAuth=null, unsubItems=null, recog=null, toastTimer=null, appModal=null;
-let state={logged:false,firebaseConfig:FIREBASE_WEB_CONFIG,appCheckSiteKey:localStorage.getItem('segundo_eu_check_site')||'',checkingSession:false,online:false,remoteUser:null,items:[],view:'home',day:today(),filter:'Todas',memoryFilter:'Todas',memorySearch:'',chat:[{role:'ai',text:'Olá! Sou o Segundo Eu. Sua agenda, tarefas e memórias podem ser organizadas aqui. Digite, por exemplo: “Lembre-me de comprar pão amanhã”.'}],pending:null,busy:false,notice:false,voiceOn:localStorage.getItem('segundo_eu_voice')==='1'};
+let state={logged:false,firebaseConfig:FIREBASE_WEB_CONFIG,appCheckSiteKey:localStorage.getItem('segundo_eu_check_site')||DEFAULT_APP_CHECK_SITE_KEY,checkingSession:false,online:false,remoteUser:null,items:[],view:'home',day:today(),filter:'Todas',memoryFilter:'Todas',memorySearch:'',chat:[{role:'ai',text:'Olá! Sou o Segundo Eu. Sua agenda, tarefas e memórias podem ser organizadas aqui. Digite, por exemplo: “Lembre-me de comprar pão amanhã”.'}],pending:null,busy:false,notice:false,voiceOn:localStorage.getItem('segundo_eu_voice')==='1'};
 const demoSeed=()=>{const t=today();return [
 {id:'d1',kind:'event',title:'Reunião de trabalho',date:t,time:'09:00',category:'trabalho',location:'Online',note:'Exemplo para conhecer a agenda'},
 {id:'d2',kind:'event',title:'Estudo bíblico',date:t,time:'11:00',category:'estudos',location:'Em casa'},
