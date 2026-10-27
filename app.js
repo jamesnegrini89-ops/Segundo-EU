@@ -15,7 +15,7 @@ const toneFor=i=>({trabalho:'tone-blue',estudos:'tone-purple',pessoal:'tone-oran
 const emFor=x=>({Ideias:'💡',Família:'👥',Saúde:'❤️',Finanças:'📊',Estudos:'📘',Viagens:'✈️',Pessoal:'✨',Trabalho:'💼'})[x]||'📝';
 const tonFor=x=>({Ideias:'orange',Família:'purple',Saúde:'pink',Finanças:'green',Estudos:'blue',Viagens:'teal',Pessoal:'purple',Trabalho:'blue'})[x]||'purple';
 let backend=null, unsubAuth=null, unsubItems=null, recog=null, toastTimer=null, appModal=null;
-let state={logged:true,firebaseConfig:null,appCheckSiteKey:localStorage.getItem('segundo_eu_check_site')||'',online:false,remoteUser:null,items:[],view:'home',day:today(),filter:'Todas',memoryFilter:'Todas',memorySearch:'',chat:[{role:'ai',text:'Olá! Sou o Segundo Eu. Sua agenda, tarefas e memórias podem ser organizadas aqui. Digite, por exemplo: “Lembre-me de comprar pão amanhã”.'}],pending:null,busy:false,notice:false,voiceOn:localStorage.getItem('segundo_eu_voice')==='1'};
+let state={logged:false,firebaseConfig:null,appCheckSiteKey:localStorage.getItem('segundo_eu_check_site')||'',online:false,remoteUser:null,items:[],view:'home',day:today(),filter:'Todas',memoryFilter:'Todas',memorySearch:'',chat:[{role:'ai',text:'Olá! Sou o Segundo Eu. Sua agenda, tarefas e memórias podem ser organizadas aqui. Digite, por exemplo: “Lembre-me de comprar pão amanhã”.'}],pending:null,busy:false,notice:false,voiceOn:localStorage.getItem('segundo_eu_voice')==='1'};
 const demoSeed=()=>{const t=today();return [
 {id:'d1',kind:'event',title:'Reunião de trabalho',date:t,time:'09:00',category:'trabalho',location:'Online',note:'Exemplo para conhecer a agenda'},
 {id:'d2',kind:'event',title:'Estudo bíblico',date:t,time:'11:00',category:'estudos',location:'Em casa'},
