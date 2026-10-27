@@ -146,8 +146,8 @@ function prepareTaskReminder(item, prior = null){
   if(item.kind!=='task')return item;
   const same=prior && prior.date===item.date && prior.time===item.time &&
     prior.title===item.title && !prior.done;
-  if(!item.done && /^\\d{4}-\\d\\d-\\d\\d$/.test(item.date||'') &&
-     /^(?:[01]\\d|2[0-3]):[0-5]\\d$/.test(item.time||'')){
+  if(!item.done && /^\d{4}-\d\d-\d\d$/.test(item.date||'') &&
+     /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(item.time||'')){
     const when=new Date(item.date+'T'+item.time+':00');
     const ms=when.getTime();
     if(Number.isFinite(ms)&&ms>Date.now()){
