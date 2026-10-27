@@ -154,3 +154,53 @@ export async function askGemini(texto) {
   return resultado.response.text() ||
     'O Gemini nao retornou uma resposta.';
 }
+
+
+// Firebase Cloud Messaging usa o service worker ja registrado pelo site.
+// O token de cada dispositivo e registrado somente no backend autenticado.
+let foregroundPushRegistered = false;
+export async function enableReminderPush(publicVapidKey) {
+  exigirUsuario(auth?.currentUser?.uid);
+  if (!publicVapidKey || !/^[A-Za-z0-9_-]{50,150}$/.test(publicVapidKey)) {
+    throw new Error('Informe a chave PUBLICA VAPID do Cloud Messaging (nao a chave do reCAPTCHA).');
+  }
+  if (!('serviceWorker' in navigator) || !('Notification' in window) || Notification.permission !== 'granted') {
+    throw new Error('Autorize notificacoes para este site no navegador Android.');
+  }
+  const [{getMessaging, getToken, isSupported, onMessage}, {getFunctions, httpsCallable}] = await Promise.all([
+    import('https://www.gstatic.com/firebasejs/13.1.0/firebase-messaging.js'),
+    import('https://www.gstatic.com/firebasejs/13.1.0/firebase-functions.js')
+  ]);
+  if (!(await isSupported())) throw new Error('Este navegador nao suporta notificacoes push do Firebase.');
+  const registration = await navigator.serviceWorker.register('./service-worker.js');
+  const messaging = getMessaging(firebaseApp);
+  const token = await getToken(messaging, {vapidKey: publicVapidKey, serviceWorkerRegistration: registration});
+  if (!token) throw new Error('O navegador ainda nao forneceu um token de notificacoes.');
+  const register = httpsCallable(getFunctions(firebaseApp, 'us-central1'), 'registerReminderDevice');
+  await register({token});
+  if (!foregroundPushRegistered) {
+    onMessage(messaging, payload => {
+      if (Notification.permission !== 'granted') return;
+      const title = payload.notification?.title || 'Segundo Eu: lembrete';
+      const body = payload.notification?.body || 'Sua tarefa chegou ao horario marcado.';
+      void registration.showNotification(title, {body, tag: 'segundo-eu-lembrete', icon: './icons/icon.svg'});
+    });
+    foregroundPushRegistered = true;
+  }
+  return true;
+}
+
+export async function disableReminderPush(publicVapidKey) {
+  exigirUsuario(auth?.currentUser?.uid);
+  const [{getMessaging, getToken}, {getFunctions, httpsCallable}] = await Promise.all([
+    import('https://www.gstatic.com/firebasejs/13.1.0/firebase-messaging.js'),
+    import('https://www.gstatic.com/firebasejs/13.1.0/firebase-functions.js')
+  ]);
+  const registration = await navigator.serviceWorker.ready;
+  const token = await getToken(getMessaging(firebaseApp), {vapidKey: publicVapidKey, serviceWorkerRegistration: registration});
+  if (token) {
+    const unregister = httpsCallable(getFunctions(firebaseApp, 'us-central1'), 'unregisterReminderDevice');
+    await unregister({token});
+  }
+  return true;
+}
