@@ -1,3 +1,9 @@
+## Alertas reais no celular (em preparacao)
+
+O projeto agora inclui a estrutura de **Firebase Cloud Messaging e Cloud Functions** para lembretes com o site fechado. **Mesclar o pull request nao ativa o envio por si so:** e necessario gerar chave VAPID publica, autorizar o Android, ativar o faturamento Blaze conforme sua decisao e implantar as Functions e o indice do Firestore. Os detalhes estao em [docs/avisos-push.md](docs/avisos-push.md).
+
+Avisos push podem ser atrasados pelo Android; nao sao equivalentes a alarmes nativos garantidos.
+
 # Segundo Eu — Versão GitHub Pages (local)
 
 Projeto PWA básico para uso pessoal: **Início, Agenda, Tarefas, Memórias, Apoio Policial e Mais**.
