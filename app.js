@@ -27,8 +27,9 @@ const FIREBASE_WEB_CONFIG = Object.freeze({
 // Chave publica de site do reCAPTCHA Enterprise (nao e chave secreta).
 // A protecao efetiva depende da configuracao do Firebase App Check e dos dominios autorizados.
 const DEFAULT_APP_CHECK_SITE_KEY = '6LdzSQMuAAAAAPU0s5MwLmhTHKzJFwgEjFFo42ne';
+const DEFAULT_VAPID_PUBLIC_KEY = ''; // Certificado Web Push publico a configurar no Firebase
 let backend=null, unsubAuth=null, unsubItems=null, recog=null, toastTimer=null, appModal=null;
-let state={logged:false,firebaseConfig:FIREBASE_WEB_CONFIG,appCheckSiteKey:localStorage.getItem('segundo_eu_check_site')||DEFAULT_APP_CHECK_SITE_KEY,checkingSession:false,online:false,remoteUser:null,items:[],view:'home',day:today(),filter:'Todas',memoryFilter:'Todas',memorySearch:'',chat:[{role:'ai',text:'Olá! Sou o Segundo Eu. Sua agenda, tarefas e memórias podem ser organizadas aqui. Digite, por exemplo: “Lembre-me de comprar pão amanhã”.'}],pending:null,busy:false,notice:false,voiceOn:localStorage.getItem('segundo_eu_voice')==='1'};
+let state={logged:false,firebaseConfig:FIREBASE_WEB_CONFIG,appCheckSiteKey:localStorage.getItem('segundo_eu_check_site')||DEFAULT_APP_CHECK_SITE_KEY,checkingSession:false,online:false,pushEnabled:localStorage.getItem('segundo_eu_push_enabled')==='1',remoteUser:null,items:[],view:'home',day:today(),filter:'Todas',memoryFilter:'Todas',memorySearch:'',chat:[{role:'ai',text:'Olá! Sou o Segundo Eu. Sua agenda, tarefas e memórias podem ser organizadas aqui. Digite, por exemplo: “Lembre-me de comprar pão amanhã”.'}],pending:null,busy:false,notice:false,voiceOn:localStorage.getItem('segundo_eu_voice')==='1'};
 const demoSeed=()=>{const t=today();return [
 {id:'d1',kind:'event',title:'Reunião de trabalho',date:t,time:'09:00',category:'trabalho',location:'Online',note:'Exemplo para conhecer a agenda'},
 {id:'d2',kind:'event',title:'Estudo bíblico',date:t,time:'11:00',category:'estudos',location:'Em casa'},
@@ -56,7 +57,10 @@ function sidePanel(){const upcoming=state.items.filter(i=>i.kind==='event'&&i.da
 function homeView(){const t=today(), evs=state.items.filter(i=>i.kind==='event'&&i.date===t).sort((a,b)=>a.time.localeCompare(b.time)),td=state.items.filter(i=>i.kind==='task'&&!i.done),memo=state.items.filter(i=>i.kind==='memory');const hour=new Date().getHours();const hi=hour<12?'Bom dia':hour<18?'Boa tarde':'Boa noite';return `<div class="hero"><h1>${hi}, ${esc(who())}!</h1><p>Aqui está o seu resumo de hoje.</p><span class="date-chip">${esc(niceDate(t))}</span></div><div class="stats"><div class="stat"><div class="stat-icon blue">${ic('calendar')}</div><strong>${evs.length}</strong><small>Compromissos de hoje</small></div><div class="stat"><div class="stat-icon orange">${ic('check')}</div><strong>${td.length}</strong><small>Tarefas pendentes</small></div><div class="stat"><div class="stat-icon green">${ic('brain')}</div><strong>${memo.length}</strong><small>Memórias salvas</small></div></div><div class="welcome-note"><p>✨ Seu espaço pessoal. Os registros são salvos neste navegador. Para não perder seus dados, use <b>Mais → Baixar backup</b> regularmente.</p></div><div class="section-row"><h3>Agenda de hoje</h3><button class="link-btn" data-view="agenda">Ver todos ${ic('arrow',14)}</button></div><div class="agenda-list">${evs.length?evs.map(i=>eventRow(i,false)).join(''):'<div class="empty"><strong>Sem compromissos hoje</strong><p>Comece adicionando o primeiro.</p></div>'}</div><button class="primary wide speak-cta" data-view="assistente">${ic('mic')} Falar com o Segundo Eu</button><div class="actioncards"><button class="actioncard" data-act="organize"><span style="font-size:25px">✨</span><b>Organize minha vida</b><p>Veja prioridades e próximos passos.</p></button><button class="actioncard" data-act="new-task"><span style="font-size:25px">✅</span><b>Nova tarefa</b><p>Anote algo para não esquecer.</p></button></div>`}
 function eventRow(i,hasActions=true){return `<div class="event-row"><span class="event-time">${esc(i.time||'09:00')}</span><span class="event-color" style="background:${colorFor(i.category)}"></span><div class="event-info"><b>${esc(i.title)}</b><span>${esc(i.location||i.category||'Compromisso')}</span></div>${hasActions?`<button class="iconaction" data-edit="${esc(i.id)}" aria-label="Editar ${esc(i.title)}">${ic('edit',16)}</button><button class="iconaction" data-delete="${esc(i.id)}" aria-label="Excluir ${esc(i.title)}">${ic('trash',16)}</button>`:''}</div>`}
 function agendaView(){const d=state.day, days=Array.from({length:7},(_,idx)=>dateAdd(today(),idx));const evs=state.items.filter(i=>i.kind==='event'&&i.date===d).sort((a,b)=>a.time.localeCompare(b.time));return `<div class="view-header"><h1>Agenda</h1><div class="toolbar"><button class="round-btn" data-act="go-today" aria-label="Voltar para hoje">${ic('calendar')}</button><button class="round-btn plus" data-act="new-event" aria-label="Novo compromisso">${ic('plus')}</button></div></div><div class="weekbar">${days.map(iso=>{const date=new Date(iso+'T12:00:00');return `<button type="button" data-day="${iso}" class="${d===iso?'active':''}">${esc(date.toLocaleDateString('pt-BR',{weekday:'short'}))}<b>${date.getDate()}</b></button>`}).join('')}</div><div class="section-row"><h3>${esc(niceDate(d))}</h3><span class="muted small">${evs.length} evento(s)</span></div><div class="timeline">${evs.length?evs.map(i=>`<div class="timeline-event"><div class="timecol">${esc(i.time||'09:00')}</div><div class="barcol" style="background:${colorFor(i.category)}"></div><div class="tline-card ${toneFor(i.category)}"><div><b>${esc(i.title)}</b><p>${esc(i.location||i.category||'Compromisso')}</p></div><div><button data-edit="${esc(i.id)}" aria-label="Editar compromisso">${ic('edit',16)}</button><button data-delete="${esc(i.id)}" aria-label="Excluir compromisso">${ic('trash',16)}</button></div></div></div>`).join(''):'<div class="empty"><strong>Dia tranquilo!</strong><p>Não há eventos para esta data.</p><button class="primary" data-act="new-event">+ Novo compromisso</button></div>'}</div><div class="section-row"><h3>Próximos dias</h3></div>${state.items.filter(i=>i.kind==='event'&&i.date>d).sort((a,b)=>(a.date+a.time).localeCompare(b.date+b.time)).slice(0,4).map(i=>`<div class="small muted" style="margin:12px 0 4px">${esc(niceDate(i.date))}</div>${eventRow(i)}`).join('')||'<p class="small muted">Sem outros compromissos agendados.</p>'}`}
-function tasksView(){const tasks=state.items.filter(i=>i.kind==='task').filter(i=>state.filter==='Todas'||(state.filter==='Hoje'&&i.date===today())||(state.filter==='Semana'&&i.date>=today()&&i.date<=dateAdd(today(),7))||(state.filter==='Concluídas'&&i.done)).sort((a,b)=>Number(a.done)-Number(b.done)||a.date.localeCompare(b.date));return `<div class="view-header"><h1>Tarefas</h1><div class="toolbar"><button class="round-btn plus" data-act="new-task" aria-label="Nova tarefa">${ic('plus')}</button></div></div><div class="filterbar">${['Todas','Hoje','Semana','Concluídas'].map(f=>`<button data-filter="${f}" class="${state.filter===f?'active':''}">${f}</button>`).join('')}</div><div class="task-list">${tasks.length?tasks.map(i=>`<div class="task-row ${i.done?'done':''}"><button class="checkbox ${i.done?'checked':''}" data-toggle="${esc(i.id)}" aria-label="${i.done?'Marcar pendente':'Concluir'}: ${esc(i.title)}">${i.done?ic('check',13):''}</button><div class="task-info"><b>${esc(i.title)}</b><small>▣ ${i.done?'Concluída':i.date===today()?'Hoje':niceDate(i.date,{day:'numeric',month:'short'})}${i.time?' às '+esc(i.time):''}</small></div>${!i.done?`<span class="priority ${i.priority.toLowerCase().replace('é','e')}">${esc(i.priority)}</span>`:''}<div class="row-actions"><button class="iconaction" data-edit="${esc(i.id)}" aria-label="Editar tarefa">${ic('edit',15)}</button><button class="iconaction" data-delete="${esc(i.id)}" aria-label="Excluir tarefa">${ic('trash',15)}</button></div></div>`).join(''):'<div class="empty"><strong>Nenhuma tarefa nesta categoria</strong><p>Você pode adicionar uma nova agora.</p><button data-act="new-task" class="primary">+ Nova tarefa</button></div>'}</div>`}
+function tasksView(){const tasks=state.items.filter(i=>i.kind==='task').filter(i=>state.filter==='Todas'||(state.filter==='Hoje'&&i.date===today())||(state.filter==='Semana'&&i.date>=today()&&i.date<=dateAdd(today(),7))||(state.filter==='Concluídas'&&i.done)).sort((a,b)=>Number(a.done)-Number(b.done)||a.date.localeCompare(b.date));return `<div class="view-header"><h1>Tarefas</h1><div class="toolbar"><button class="round-btn plus" data-act="new-task" aria-label="Nova tarefa">${ic('plus')}</button></div></div><div class="push-panel" role="group" aria-label="Avisos para tarefas">
+  <div><b>Notificações no celular</b><p>${state.pushEnabled?'Ativadas neste navegador. O Android pode atrasar avisos.':'Para receber com o site fechado, ative os avisos neste aparelho.'}</p></div>
+  <button type="button" class="${state.pushEnabled?'mini-btn':'primary'}" data-act="${state.pushEnabled?'disable-push':'enable-push'}">${state.pushEnabled?'Desativar avisos':'Ativar avisos'}</button>
+</div><div class="filterbar">${['Todas','Hoje','Semana','Concluídas'].map(f=>`<button data-filter="${f}" class="${state.filter===f?'active':''}">${f}</button>`).join('')}</div><div class="task-list">${tasks.length?tasks.map(i=>`<div class="task-row ${i.done?'done':''}"><button class="checkbox ${i.done?'checked':''}" data-toggle="${esc(i.id)}" aria-label="${i.done?'Marcar pendente':'Concluir'}: ${esc(i.title)}">${i.done?ic('check',13):''}</button><div class="task-info"><b>${esc(i.title)}</b><small>▣ ${i.done?'Concluída':i.date===today()?'Hoje':niceDate(i.date,{day:'numeric',month:'short'})}${i.time?' às '+esc(i.time):''}</small></div>${!i.done?`<span class="priority ${i.priority.toLowerCase().replace('é','e')}">${esc(i.priority)}</span>`:''}<div class="row-actions"><button class="iconaction" data-edit="${esc(i.id)}" aria-label="Editar tarefa">${ic('edit',15)}</button><button class="iconaction" data-delete="${esc(i.id)}" aria-label="Excluir tarefa">${ic('trash',15)}</button></div></div>`).join(''):'<div class="empty"><strong>Nenhuma tarefa nesta categoria</strong><p>Você pode adicionar uma nova agora.</p><button data-act="new-task" class="primary">+ Nova tarefa</button></div>'}</div>`}
 function memoryView(){const ms=state.items.filter(i=>i.kind==='memory').filter(i=>state.memoryFilter==='Todas'||i.category===state.memoryFilter).filter(i=>(i.title+' '+i.content).toLowerCase().includes(state.memorySearch.toLowerCase()));return `<div class="view-header"><h1>Memórias</h1><div class="toolbar"><button class="round-btn plus" data-act="new-memory" aria-label="Nova memória">${ic('plus')}</button></div></div><div class="field"><label for="memory-search">Buscar nas suas memórias</label><input id="memory-search" type="search" placeholder="Pesquisar título ou conteúdo..." value="${esc(state.memorySearch)}"></div><div class="filterbar">${['Todas','Pessoal','Família','Trabalho','Ideias','Saúde','Finanças','Estudos','Viagens'].map(f=>`<button class="${state.memoryFilter===f?'active':''}" data-mfilter="${f}">${f}</button>`).join('')}</div><div class="memory-list">${ms.length?ms.map(i=>`<div class="memory-item"><span class="memory-icon ${tonFor(i.category)}">${emFor(i.category)}</span><div style="flex:1;min-width:0"><b>${esc(i.title)}</b><p>${esc(i.content)}</p><span class="muted" style="font-size:10px">${esc(i.category)}</span></div><button class="iconaction" data-edit="${esc(i.id)}" aria-label="Editar memória">${ic('edit',15)}</button><button class="iconaction" data-delete="${esc(i.id)}" aria-label="Excluir memória">${ic('trash',15)}</button></div>`).join(''):'<div class="empty"><strong>Nenhuma memória encontrada</strong><p>Registre algo que seja útil recordar.</p><button data-act="new-memory" class="primary">+ Nova memória</button></div>'}</div><p class="muted-note" style="margin-top:18px">Suas memórias ficam somente neste navegador. Faça backups regularmente.</p>`}
 function assistantView(){return `<div class="view-header"><div><h1>Seu assistente</h1><div class="kicker">Inteligência e organização para o seu dia</div></div><span class="softlabel">${state.remoteUser?(state.appCheckSiteKey?'Gemini configurado':'Conta conectada'):'Assistente local'}</span></div><div class="actioncards"><button data-act="organize" class="actioncard">${ic('spark',25)}<b>Organize minha vida</b><p>Encontre o que merece atenção.</p></button><button data-act="mic" class="actioncard">${ic('mic',25)}<b>Comando por voz</b><p>Fale e converta em texto.</p></button></div><div class="chatlog" id="chatlog" role="log" aria-label="Conversa">${state.chat.map(m=>`<div class="msg ${m.role==='me'?'me':'ai'}">${esc(m.text)}</div>`).join('')}${state.busy?'<div class="msg ai" role="status">Gemini está preparando a resposta…</div>':''}</div>${state.pending?`<div class="approval" role="group" aria-label="Ação aguardando confirmação"><b>Confirme antes de executar</b><p>${esc(state.pending.description)}</p><p class="muted-note">Você também pode dizer ou escrever “sim” para salvar ou “não” para cancelar.</p><div class="buttons"><button class="primary" data-act="approve">${ic('check',16)} Confirmar</button><button class="mini-btn" data-act="reject">Cancelar</button></div></div>`:''}<form id="chat-form" class="composer"><input aria-label="Mensagem para o Segundo Eu" name="message" placeholder="O que posso fazer por você?" required maxlength="1200" autocomplete="off"><button class="round-btn" type="button" data-act="mic" title="Falar">${ic('mic')}</button><button class="round-btn plus" aria-label="Enviar" type="submit">${ic('send')}</button></form><div class="toggle-row" style="margin-top:16px"><span class="muted-note">${state.remoteUser?'Gemini pode responder quando estiver configurado.':'Comandos simples funcionam no computador. A IA online ainda não está integrada.'}</span><label class="small muted"><input type="checkbox" id="voice-switch" ${state.voiceOn?'checked':''}> Ler respostas</label></div>`}
 function settingsView(){return `<div class="view-header"><h1>Mais</h1>${ic('settings')}</div><div class="configblock"><h3>💾 Seus dados e backup</h3><p>Seu Segundo Eu já pode ser usado aqui. Compromissos, tarefas e memórias são salvos <b>neste navegador e neste computador</b>. Eles não são enviados à nuvem.</p><div style="display:flex;gap:10px;flex-wrap:wrap"><button class="primary" data-act="export">${ic('download')} Baixar backup</button><button class="outline" data-act="import">Restaurar backup</button></div><input type="file" id="restore-file" accept=".json,application/json" hidden><p class="muted-note">Guarde o arquivo de backup em um lugar seguro. Limpar os dados do navegador, mudar de aparelho ou usar outro perfil pode apagar os dados locais. Restaurar substitui os registros atuais.</p></div><div class="configblock"><h3>✨ Assistente pessoal</h3><p>O assistente local pode organizar sua rotina, resumir compromissos e criar tarefas a partir de comandos simples, com sua confirmação.</p><button class="outline" data-view="assistente">Abrir assistente</button><p class="muted-note">Respostas livres de inteligência artificial (Gemini), login, sincronização entre aparelhos e lembretes com o navegador fechado ainda não estão habilitados. Essas funções exigem configuração de serviços online.</p></div><div class="configblock"><h3>🔊 Voz e avisos</h3><label class="toggle-row">Ler respostas do assistente <input id="voice-switch" type="checkbox" ${state.voiceOn?'checked':''}></label><hr class="dividerline"><button data-act="notifications" class="mini-btn">${ic('bell')} Permitir avisos enquanto o app está aberto</button><p class="muted-note">Microfone e avisos dependem das permissões e do suporte do navegador.</p></div><div class="configblock"><h3>🔎 Verificar este computador</h3><p>Verificação interna de armazenamento, navegação e recursos do navegador.</p><button class="outline" data-act="diagnostic">Verificar funções locais</button></div><p class="muted-note">Segundo Eu · versão pessoal local · aplicativo para uso neste computador, sem conta.</p>`}
@@ -128,7 +132,7 @@ function editItem(kind,id){
     inner+=field('date','Data',entry.date,'date')+field('time','Horário',entry.time,'time')+field('location','Local ou observação',entry.location||'','text',false);
     inner+=`<div class="field"><label for="fld-category">Categoria</label><select id="fld-category" name="category">${['pessoal','trabalho','estudos','familia','saude'].map(x=>`<option value="${x}" ${entry.category===x?'selected':''}>${x}</option>`).join('')}</select></div>`;
   }else if(kind==='task'){
-    inner+=field('date','Prazo',entry.date,'date')+field('time','Horário (opcional, sem aviso automático)',entry.time||'','time',false);
+    inner+=field('date','Prazo',entry.date,'date')+field('time','Horário (opcional)',entry.time||'','time',false);
     inner+=`<div class="field"><label for="fld-priority">Prioridade</label><select id="fld-priority" name="priority">${['Baixa','Média','Alta'].map(x=>`<option ${entry.priority===x?'selected':''}>${x}</option>`).join('')}</select></div>`;
   }else{
     inner+=field('content','Informações',entry.content||'','textarea');
@@ -136,7 +140,55 @@ function editItem(kind,id){
   }
   openModal(`${edit?'Editar':'Adicionar'} ${label}`,`<form id="item-form" data-kind="${kind}" data-id="${esc(id||'')}">${inner}${modalButtons}</form>`);
 }
+// Horario da tarefa = horario local do aparelho no momento do cadastro (UTC no Firestore).
+// Apenas tarefas futuras, nao concluidas e com horario podem disparar push.
+function prepareTaskReminder(item, prior = null){
+  if(item.kind!=='task')return item;
+  const same=prior && prior.date===item.date && prior.time===item.time &&
+    prior.title===item.title && !prior.done;
+  if(!item.done && /^\\d{4}-\\d\\d-\\d\\d$/.test(item.date||'') &&
+     /^(?:[01]\\d|2[0-3]):[0-5]\\d$/.test(item.time||'')){
+    const when=new Date(item.date+'T'+item.time+':00');
+    const ms=when.getTime();
+    if(Number.isFinite(ms)&&ms>Date.now()){
+      if(same && Number(prior.reminderAtMs)===ms && prior.reminderStatus){
+        item.reminderAtMs=ms;item.reminderStatus=prior.reminderStatus;
+        item.reminderAttempts=Number(prior.reminderAttempts||0);
+        if(prior.claimedAtMs)item.claimedAtMs=prior.claimedAtMs;
+      }else{
+        item.reminderAtMs=ms;item.reminderStatus='pending';item.reminderAttempts=0;
+        delete item.claimedAtMs;
+      }
+      return item;
+    }
+  }
+  delete item.reminderAtMs;delete item.reminderStatus;delete item.reminderAttempts;
+  delete item.claimedAtMs;delete item.reminderResultAt;
+  return item;
+}
+function showPushSetup(){
+  if(!state.remoteUser || !backend){toast('Entre na sua conta para receber alertas.');return}
+  if(!('Notification' in window)||!('serviceWorker' in navigator)){
+    toast('Este navegador nao oferece suporte a notificacoes push. Use o Chrome no Android.');return
+  }
+  const key=localStorage.getItem('segundo_eu_vapid_public')||DEFAULT_VAPID_PUBLIC_KEY;
+  openModal('Ativar avisos no celular',`<p>O Segundo Eu poderá enviar notificações com o aplicativo fechado, após a ativação das funções no Firebase. A entrega pode atrasar por causa do Android ou da internet.</p><form id="push-form">
+    ${field('vapidPublic','Chave pública VAPID do Firebase Cloud Messaging',key,'text')}
+    <div class="buttons"><button type="submit" class="primary">Autorizar notificações</button><button type="button" class="mini-btn" data-act="close-modal">Cancelar</button></div>
+  </form><p class="muted-note">A VAPID vem de Firebase → Configurações do projeto → Cloud Messaging → Certificados de push da Web. Não é a chave reCAPTCHA nem uma chave secreta.</p>`);
+}
+async function syncExistingTaskReminders(){
+  if(!state.remoteUser||!backend)return;
+  // Migrate apenas tarefas futuras existentes depois da ativacao explicitamente autorizada.
+  for(const task of [...state.items].filter(t=>t.kind==='task'&&!t.done&&t.time)){
+    const next=prepareTaskReminder({...task},task);
+    if(next.reminderAtMs && (next.reminderAtMs!==task.reminderAtMs||next.reminderStatus!==task.reminderStatus)){
+      await backend.upsertItem(state.remoteUser.uid,next);
+    }
+  }
+}
 async function saveItem(item){
+  item=prepareTaskReminder(item,state.items.find(x=>x.id===item.id)||null);
   if(state.remoteUser&&backend){await backend.upsertItem(state.remoteUser.uid,item)}
   else{const index=state.items.findIndex(i=>i.id===item.id);if(index<0)state.items.push(item);else state.items[index]=item;persistDemo()}
   render();toast('Salvo com sucesso.');
@@ -164,6 +216,10 @@ async function connectFirebase(){
       if(unsubItems){unsubItems();unsubItems=null}
       if(user){state.logged=false;localStorage.removeItem('segundo_eu_demo_logged');state.items=[];
         unsubItems=backend.watchItems(user.uid,items=>{state.items=items;render()},err=>toast('Falha na sincronização: '+err.message));
+        const key=localStorage.getItem('segundo_eu_vapid_public')||DEFAULT_VAPID_PUBLIC_KEY;
+        if(state.pushEnabled&&key&&'Notification' in window&&Notification.permission==='granted'){
+          void backend.enableReminderPush(key).catch(err=>console.warn('Push precisa ser reativado:',err?.message||err));
+        }
       }else if(!state.logged){state.items=[]}
       render();
     });
@@ -200,14 +256,14 @@ function parseLocalAction(message){
   if(!title||title.length>250||/(?:^|\s)(?:às|as)\s*\d/i.test(title))return null;
   const item={id:uid(),kind:'task',title,date:dateAdd(today(),tomorrow?1:0),priority:'Média',done:false};
   if(time)item.time=time;
-  return {description:`Salvar tarefa “${title}” para ${tomorrow?'amanhã':'hoje'}${time?' às '+time:''}? ${time?'Atenção: ainda não há aviso automático no horário.':''}`,item};
+  return {description:`Salvar tarefa “${title}” para ${tomorrow?'amanhã':'hoje'}${time?' às '+time:''}? ${time?'Para receber avisos com o app fechado, ative notificações em Tarefas. O Android pode atrasar a entrega.':''}`,item};
 }
 async function confirmPendingAction(){
   const proposal=state.pending;
   if(!proposal)return;
   await saveItem(proposal.item);
   state.pending=null;
-  aiReply(proposal.item.time?'Tarefa com horário salva na lista. Atenção: o aplicativo ainda não envia avisos automáticos no horário.':'Tarefa salva na sua lista com sucesso.');
+  aiReply(proposal.item.time?(state.pushEnabled?'Tarefa com horário salva. O aviso push foi programado para aproximadamente o horário escolhido.':'Tarefa com horário salva. Para receber avisos com o app fechado, ative notificações em Tarefas.'):'Tarefa salva na sua lista com sucesso.');
 }
 async function handleChat(msg){
   const message=msg.trim();if(!message)return;
@@ -329,7 +385,16 @@ document.addEventListener('click',async e=>{
       case 'reject':state.pending=null;aiReply('Certo, não salvei a tarefa.');break;
       case 'logout':if(backend)await backend.logout();break;
       case 'google-login':if(!backend){showConfig();toast('Configure o Firebase primeiro.')}else await backend.googleLogin();break;
-      case 'notifications':if('Notification' in window){let permission=await Notification.requestPermission();toast(permission==='granted'?'Avisos permitidos neste dispositivo.':'Avisos não autorizados.')}else toast('Notificações não suportadas neste navegador.');break;
+      case 'notifications':showPushSetup();break;
+      case 'enable-push':showPushSetup();break;
+      case 'disable-push':{
+        if(!state.remoteUser||!backend)break;
+        if(!confirm('Parar de receber avisos neste aparelho?'))break;
+        const key=localStorage.getItem('segundo_eu_vapid_public')||DEFAULT_VAPID_PUBLIC_KEY;
+        if(key)await backend.disableReminderPush(key);
+        localStorage.removeItem('segundo_eu_push_enabled');
+        state.pushEnabled=false;render();toast('Avisos desativados neste aparelho.');break;
+      }
       case 'export':exportData();break;
       case 'import':document.getElementById('restore-file')?.click();break;
     }
@@ -351,7 +416,7 @@ document.addEventListener('change',e=>{
   }
 });
 document.addEventListener('submit',async e=>{
-  if(!['item-form','config-form','login-form','chat-form'].includes(e.target.id))return;
+  if(!['item-form','config-form','login-form','chat-form','push-form'].includes(e.target.id))return;
   e.preventDefault();const form=e.target,fd=new FormData(form);
   try{
     if(form.id==='item-form'){
@@ -363,6 +428,21 @@ document.addEventListener('submit',async e=>{
       if(kind==='task'){Object.assign(item,{date:fd.get('date'),priority:fd.get('priority'),done:previous.done||false});const taskTime=String(fd.get('time')||'');if(taskTime)item.time=taskTime;else delete item.time}
       if(kind==='memory'){Object.assign(item,{content:String(fd.get('content')||''),category:fd.get('category')})}
       await saveItem(item);closeModal();
+    }else if(form.id==='push-form'){
+      if(!state.remoteUser||!backend){toast('Entre na sua conta primeiro.');return}
+      const vapid=String(fd.get('vapidPublic')||'').trim();
+      if(!/^[A-Za-z0-9_-]{50,150}$/.test(vapid)){toast('Copie a chave PUBLICA VAPID, disponivel em Cloud Messaging.');return}
+      // A permissao e pedida a partir do clique real do usuario, sem solicitação silenciosa.
+      if(Notification.permission!=='granted'){
+        const permission=await Notification.requestPermission();
+        if(permission!=='granted'){toast('Permissao de notificacoes negada no navegador.');return}
+      }
+      await backend.enableReminderPush(vapid);
+      localStorage.setItem('segundo_eu_vapid_public',vapid);
+      localStorage.setItem('segundo_eu_push_enabled','1');
+      state.pushEnabled=true;
+      await syncExistingTaskReminders();
+      closeModal();render();toast('Alertas ativados neste aparelho. Confira um aviso de teste com uma tarefa futura.');
     }else if(form.id==='config-form'){
       const config={apiKey:String(fd.get('apiKey')).trim(),authDomain:String(fd.get('authDomain')).trim(),projectId:String(fd.get('projectId')).trim(),appId:String(fd.get('appId')).trim(),messagingSenderId:String(fd.get('messagingSenderId')).trim()};
       if(!config.apiKey||!config.projectId||!config.appId){toast('Preencha os dados necessários do Firebase.');return}
