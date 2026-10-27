@@ -8,3 +8,10 @@
 .police-actions button{display:inline-flex;gap:8px;align-items:center;justify-content:center}
 .police-result{white-space:pre-wrap;overflow-wrap:anywhere;font-family:'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;line-height:1.7;background:#f7f8fd;color:#293049;border:1px solid #e9eafa;padding:18px;border-radius:15px;max-height:560px;overflow:auto}
 @media (max-width: 700px){.police-actions button{flex:1 1 130px}.police-textarea{min-height:210px}}
+
+/* Alerta push: visivel e acessivel no Android e computador */
+.push-panel{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:0 0 18px;padding:15px 17px;border:1px solid #deddf8;border-radius:18px;background:#f7f6ff}
+.push-panel b{font-size:14px;color:#242448}
+.push-panel p{margin:4px 0 0;font-size:12px;line-height:1.5;color:#626984}
+.push-panel button{flex-shrink:0;font-size:12px}
+@media(max-width:620px){.push-panel{align-items:stretch;flex-direction:column}.push-panel button{align-self:stretch}}
