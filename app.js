@@ -265,7 +265,7 @@ document.addEventListener('click',async e=>{
     if(target.dataset.delete){await deleteItem(target.dataset.delete);return}
     switch(modalAction){
       case 'demo-login':demoLogin();break;
-      case 'config':toast('A integração do Firebase fica para a próxima etapa.');break;
+      case 'config':showConfig();break;
       case 'new-task':editItem('task');break;
       case 'new-event':editItem('event');break;
       case 'new-memory':editItem('memory');break;
