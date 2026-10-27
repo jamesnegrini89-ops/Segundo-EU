@@ -1,0 +1,9 @@
+# Nunca publique documentos internos, dados pessoais, ocorrencias ou chaves de API
+*.pdf
+*.env
+.env*
+*backup*.json
+*ocorrencia*.txt
+*ocorrencia*.json
+node_modules/
+.DS_Store
