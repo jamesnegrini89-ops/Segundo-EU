@@ -334,7 +334,17 @@ document.addEventListener('submit',async e=>{
   }catch(err){actError(err)}
 });
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()});
+// Recupera a configuracao web salva e reconecta ao Firebase apos atualizar a pagina.
+try {
+  const savedConfig = JSON.parse(localStorage.getItem('segundo_eu_fb_cfg') || 'null');
+  if (savedConfig?.apiKey && savedConfig?.projectId && savedConfig?.appId) {
+    state.firebaseConfig = savedConfig;
+  }
+} catch (err) {
+  console.warn('Configuracao do Firebase salva nao pode ser lida.', err);
+}
 loadDemo();render();
+if (state.firebaseConfig) void connectFirebase();
 
 if('serviceWorker' in navigator && /^https?:$/.test(location.protocol))window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js').catch(()=>{}));
 })();
