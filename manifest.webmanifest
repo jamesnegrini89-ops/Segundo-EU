@@ -1,0 +1,19 @@
+{
+  "name": "Segundo Eu",
+  "short_name": "Segundo Eu",
+  "description": "Assistente pessoal e rascunho local de ocorrências",
+  "lang": "pt-BR",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f7f8fd",
+  "theme_color": "#645cf4",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "type": "image/svg+xml",
+      "sizes": "any",
+      "purpose": "any"
+    }
+  ]
+}
