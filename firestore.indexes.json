@@ -1,0 +1,19 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "items",
+      "queryScope": "COLLECTION_GROUP",
+      "fields": [
+        {
+          "fieldPath": "reminderStatus",
+          "order": "ASCENDING"
+        },
+        {
+          "fieldPath": "reminderAtMs",
+          "order": "ASCENDING"
+        }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}
